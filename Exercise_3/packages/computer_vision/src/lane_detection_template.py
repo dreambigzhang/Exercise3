@@ -53,7 +53,12 @@ class LaneDetectionNode(DTROS):
         # LED
 
         # ROI vertices
-        self.roi = None
+        self.roi_vertices = np.array([[
+            (100, 360),  # Bottom-left corner
+            (400, 200),  # Top-left corner
+            (600, 200),  # Top-right corner
+            (900, 360)   # Bottom-right corner
+        ]], dtype=np.int32)
 
         # define other variables as needed
         self.rate = rospy.Rate(5)
