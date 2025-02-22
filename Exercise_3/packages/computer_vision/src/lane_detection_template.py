@@ -32,6 +32,14 @@ class LaneDetectionNode(DTROS):
         self.white_lower = np.array([0, 0, 200])
         self.white_upper = np.array([255, 30, 255])
 
+        # Define HSV color ranges for blue, red, and green
+        self.lower_blue = np.array([100, 150, 50])
+        self.upper_blue = np.array([140, 255, 255])
+        self.lower_red = np.array([0, 150, 50])
+        self.upper_red = np.array([10, 255, 255])
+        self.lower_green = np.array([40, 150, 50])
+        self.upper_green = np.array([80, 255, 255])
+
         # initialize bridge and subscribe to camera feed
         self._vehicle_name = os.environ['VEHICLE_NAME']
         self._camera_topic = f"/{self._vehicle_name}/camera_node/image/compressed"
@@ -67,14 +75,39 @@ class LaneDetectionNode(DTROS):
         resized = image[y:y+h, x:x+w]
         return cv2.GaussianBlur(resized, (5, 5), 0)
 
-    def detect_lane_color(self, **kwargs):
-        # add your code here
-        pass
+    def detect_lane_color(self, image):
+        """
+        Detect lane colors (blue, red, green) using HSV thresholds.
+        """
+        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        
+        # Create masks for each color
+        blue_mask = cv2.inRange(hsv_image, self.lower_blue, self.upper_blue)
+        red_mask = cv2.inRange(hsv_image, self.lower_red, self.upper_red)
+        green_mask = cv2.inRange(hsv_image, self.lower_green, self.upper_green)
+        
+        # Combine masks
+        combined_mask = cv2.bitwise_or(blue_mask, cv2.bitwise_or(red_mask, green_mask))
+        return combined_mask
 
-    def detect_lane(self, **kwargs):
-        # add your code here
-        # potentially useful in question 2.1
-        pass
+    def detect_lane(self, image):
+        """
+        Detect lanes using contour detection and ROI.
+        """
+        # Apply ROI
+        mask = np.zeros_like(image)
+        cv2.fillPoly(mask, self.roi_vertices, 255)
+        masked_image = cv2.bitwise_and(image, mask)
+        
+        # Find contours
+        contours, _ = cv2.findContours(masked_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Draw bounding rectangles around detected lanes
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        
+        return image
 
     def callback(self, msg):
         # add your code here
